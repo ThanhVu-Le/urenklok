@@ -12,6 +12,16 @@ Urenregistratie voor **Le Thanh & Co**. Eén gebruiker, geen account, geen serve
 - **Factuurweergave** (Overzicht → *Factuur*): printbare urenspecificatie per maand, per sessie of per project, met bedragen, btw en je bedrijfsnaam. Via *Afdrukken → Opslaan als PDF* heb je een bijlage voor je factuur.
 - **Gegevens**: CSV-export voor Nederlandse Excel, **synchroniseren** tussen apparaten en een JSON-back-up die je kunt terugzetten.
 
+## Online gebruiken en installeren
+
+De app staat online op **https://thanhvu-le.github.io/urenklok/**. Open dat adres en installeer hem:
+
+- **Laptop (Chrome/Edge)**: klik op het installatie-icoon in de adresbalk (of menu → *Apps* → *Urenklok installeren*).
+- **Android (Chrome)**: menu ⋮ → *App installeren*.
+- **iPhone (Safari)**: deelknop → *Zet op beginscherm*.
+
+Na installatie werkt de app volledig offline. Je uren blijven op je eigen apparaat; de website levert alleen de app zelf. Elke push naar `master` wordt automatisch getest en opnieuw gepubliceerd (GitHub Actions, zie `.github/workflows/deploy.yml`); de app meldt dan *"Er is een nieuwe versie"*.
+
 ## Starten
 
 Vereist: [Node.js](https://nodejs.org) 20 of nieuwer.
