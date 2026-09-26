@@ -9,6 +9,7 @@ import { formatClock } from './lib/dates';
 import { netMs } from './lib/time';
 import { ClockScreen } from './screens/ClockScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
+import { DataScreen } from './screens/DataScreen';
 import { ProjectsScreen } from './screens/ProjectsScreen';
 
 const NAV: { route: Route; label: string; icon: typeof ClockIcon }[] = [
@@ -65,7 +66,7 @@ function Shell() {
         {route === 'klok' && <ClockScreen clock={clock} />}
         {route === 'overzicht' && <OverviewScreen />}
         {route === 'projecten' && <ProjectsScreen />}
-        {route === 'gegevens' && <p className="muted">Gegevens volgt.</p>}
+        {route === 'gegevens' && <DataScreen />}
       </main>
     </div>
   );

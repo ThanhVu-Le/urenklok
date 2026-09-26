@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { BarChart } from '../components/BarChart';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../components/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon } from '../components/Icons';
 import { SessionForm } from '../components/SessionForm';
 import { SessionList } from '../components/SessionList';
 import { useToast } from '../components/Toast';
@@ -15,6 +15,7 @@ import {
   periodRange,
   shiftPeriod,
 } from '../lib/dates';
+import { exportCsv } from '../lib/csvExport';
 import { totalsInRange } from '../lib/time';
 import type { PeriodKind } from '../types';
 
@@ -144,6 +145,16 @@ export function OverviewScreen() {
         <div className="card-title">
           <h2>Sessies</h2>
           <div className="row">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={async () => {
+                const n = await exportCsv(range);
+                toast(n === 0 ? 'Geen afgeronde sessies om te exporteren.' : `${n} sessies geëxporteerd naar CSV`);
+              }}
+            >
+              <DownloadIcon /> CSV
+            </button>
             <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>
               <PlusIcon /> Sessie toevoegen
             </button>

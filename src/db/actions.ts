@@ -1,4 +1,5 @@
 /** Alle schrijfacties op de database. Schermen roepen alleen deze functies aan. */
+import { createBackup, type Backup } from '../lib/backup';
 import type { Pause, Project, Session } from '../types';
 import { db, newId, PROJECT_COLORS } from './db';
 
@@ -128,5 +129,29 @@ export async function moveProject(id: string, direction: -1 | 1): Promise<void> 
     if (!current || !other) return;
     await db.projects.update(current.id, { order: other.order });
     await db.projects.update(other.id, { order: current.order });
+  });
+}
+
+// ---------- Back-up ----------
+
+export const SETTING_LAST_BACKUP = 'lastBackupAt';
+
+export async function exportAll(): Promise<Backup> {
+  return db.transaction('r', db.projects, db.sessions, db.settings, async () =>
+    createBackup({
+      projects: await db.projects.toArray(),
+      sessions: await db.sessions.toArray(),
+      settings: await db.settings.toArray(),
+    }),
+  );
+}
+
+/** Vervangt alle gegevens door de inhoud van de back-up (in één transactie: alles of niets). */
+export async function replaceAll(backup: Backup): Promise<void> {
+  await db.transaction('rw', db.projects, db.sessions, db.settings, async () => {
+    await Promise.all([db.projects.clear(), db.sessions.clear(), db.settings.clear()]);
+    await db.projects.bulkAdd(backup.projects);
+    await db.sessions.bulkAdd(backup.sessions);
+    await db.settings.bulkAdd(backup.settings);
   });
 }

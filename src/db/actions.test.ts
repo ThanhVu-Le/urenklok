@@ -1,7 +1,16 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { netMs } from '../lib/time';
-import { clockIn, clockOut, getActiveSession, getSetting, SETTING_LAST_PROJECT, togglePause } from './actions';
+import {
+  clockIn,
+  clockOut,
+  exportAll,
+  getActiveSession,
+  getSetting,
+  replaceAll,
+  SETTING_LAST_PROJECT,
+  togglePause,
+} from './actions';
 import { db, DEFAULT_PROJECTS } from './db';
 
 const MIN = 60_000;
@@ -47,5 +56,19 @@ describe('database', () => {
     await clockIn(project!.id, 0);
     await clockIn(project!.id, 1000);
     expect(await db.sessions.count()).toBe(1);
+  });
+});
+
+describe('back-up', () => {
+  it('export en import leveren exact dezelfde gegevens op', async () => {
+    const [project] = await db.projects.toArray();
+    await clockIn(project!.id, 1000);
+    await clockOut(5000);
+    const backup = await exportAll();
+    await db.sessions.clear();
+    await db.projects.clear();
+    await replaceAll(backup);
+    expect(await db.projects.count()).toBe(DEFAULT_PROJECTS.length);
+    expect(await db.sessions.toArray()).toEqual(backup.sessions);
   });
 });
