@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ChartIcon, ClockIcon, DatabaseIcon, FolderIcon } from './components/Icons';
 import { ToastProvider, useToast } from './components/Toast';
+import { UpdatePrompt } from './components/UpdatePrompt';
 import { useClock } from './hooks/useClock';
 import { useNow } from './hooks/useNow';
 import { routeHref, useRoute, type Route } from './hooks/useRoute';
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <ToastProvider>
       <Shell />
+      <UpdatePrompt />
     </ToastProvider>
   );
 }
