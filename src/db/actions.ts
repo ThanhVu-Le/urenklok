@@ -1,6 +1,8 @@
 /** Alle schrijfacties op de database. Schermen roepen alleen deze functies aan. */
 import { createBackup, type Backup } from '../lib/backup';
-import type { Pause, Project, Session } from '../types';
+import { mergeData, type MergeStats, type SyncData } from '../lib/merge';
+import { normalizePreferences, PREFERENCES_KEY } from '../lib/preferences';
+import type { Pause, Preferences, Project, Session } from '../types';
 import { db, newId, PROJECT_COLORS } from './db';
 
 export const SETTING_LAST_PROJECT = 'lastProjectId';
@@ -92,8 +94,12 @@ export async function addSession(
   return id;
 }
 
+/** Verwijdert een sessie en onthoudt dat, zodat de verwijdering ook via synchroniseren doorwerkt. */
 export async function deleteSession(id: string): Promise<void> {
-  await db.sessions.delete(id);
+  await db.transaction('rw', db.sessions, db.deletions, async () => {
+    await db.sessions.delete(id);
+    await db.deletions.put({ id, deletedAt: Date.now() });
+  });
 }
 
 // ---------- Projecten ----------
@@ -101,22 +107,27 @@ export async function deleteSession(id: string): Promise<void> {
 export async function addProject(name: string, color?: string): Promise<string> {
   const all = await db.projects.toArray();
   const id = newId();
+  const now = Date.now();
   await db.projects.add({
     id,
     name: name.trim(),
     color: color ?? PROJECT_COLORS[all.length % PROJECT_COLORS.length]!,
     archived: false,
     order: all.reduce((max, p) => Math.max(max, p.order), -1) + 1,
-    createdAt: Date.now(),
+    hourlyRate: null,
+    weeklyGoalHours: null,
+    createdAt: now,
+    updatedAt: now,
   });
   return id;
 }
 
 export async function updateProject(
   id: string,
-  patch: Partial<Pick<Project, 'name' | 'color' | 'archived'>>,
+  patch: Partial<Pick<Project, 'name' | 'color' | 'archived' | 'hourlyRate' | 'weeklyGoalHours'>>,
 ): Promise<void> {
-  await db.projects.update(id, patch.name !== undefined ? { ...patch, name: patch.name.trim() } : patch);
+  const clean = patch.name !== undefined ? { ...patch, name: patch.name.trim() } : patch;
+  await db.projects.update(id, { ...clean, updatedAt: Date.now() });
 }
 
 /** Verplaatst een project één plek omhoog (-1) of omlaag (+1) in de lijst. */
@@ -127,8 +138,22 @@ export async function moveProject(id: string, direction: -1 | 1): Promise<void> 
     const other = list[index + direction];
     const current = list[index];
     if (!current || !other) return;
-    await db.projects.update(current.id, { order: other.order });
-    await db.projects.update(other.id, { order: current.order });
+    const now = Date.now();
+    await db.projects.update(current.id, { order: other.order, updatedAt: now });
+    await db.projects.update(other.id, { order: current.order, updatedAt: now });
+  });
+}
+
+// ---------- Voorkeuren ----------
+
+export async function getPreferences(): Promise<Preferences> {
+  return normalizePreferences((await db.settings.get(PREFERENCES_KEY))?.value);
+}
+
+export async function savePreferences(patch: Partial<Omit<Preferences, 'updatedAt'>>): Promise<void> {
+  await db.transaction('rw', db.settings, async () => {
+    const current = await getPreferences();
+    await setSetting(PREFERENCES_KEY, { ...current, ...patch, updatedAt: Date.now() });
   });
 }
 
@@ -137,21 +162,66 @@ export async function moveProject(id: string, direction: -1 | 1): Promise<void> 
 export const SETTING_LAST_BACKUP = 'lastBackupAt';
 
 export async function exportAll(): Promise<Backup> {
-  return db.transaction('r', db.projects, db.sessions, db.settings, async () =>
+  return db.transaction('r', db.projects, db.sessions, db.settings, db.deletions, async () =>
     createBackup({
       projects: await db.projects.toArray(),
       sessions: await db.sessions.toArray(),
       settings: await db.settings.toArray(),
+      deletions: await db.deletions.toArray(),
     }),
   );
 }
 
 /** Vervangt alle gegevens door de inhoud van de back-up (in één transactie: alles of niets). */
 export async function replaceAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', db.projects, db.sessions, db.settings, async () => {
-    await Promise.all([db.projects.clear(), db.sessions.clear(), db.settings.clear()]);
+  await db.transaction('rw', db.projects, db.sessions, db.settings, db.deletions, async () => {
+    await Promise.all([db.projects.clear(), db.sessions.clear(), db.settings.clear(), db.deletions.clear()]);
     await db.projects.bulkAdd(backup.projects);
     await db.sessions.bulkAdd(backup.sessions);
     await db.settings.bulkAdd(backup.settings);
+    await db.deletions.bulkAdd(backup.deletions);
+  });
+}
+
+// ---------- Synchroniseren (samenvoegen) ----------
+
+export const SETTING_LAST_SYNC = 'lastSyncAt';
+
+function syncDataFromBackup(backup: Backup): SyncData {
+  const prefs = backup.settings.find((s) => s.key === PREFERENCES_KEY);
+  return {
+    projects: backup.projects,
+    sessions: backup.sessions,
+    deletions: backup.deletions,
+    preferences: prefs ? normalizePreferences(prefs.value) : null,
+  };
+}
+
+async function localSyncData(): Promise<SyncData> {
+  const prefs = await db.settings.get(PREFERENCES_KEY);
+  return {
+    projects: await db.projects.toArray(),
+    sessions: await db.sessions.toArray(),
+    deletions: await db.deletions.toArray(),
+    preferences: prefs ? normalizePreferences(prefs.value) : null,
+  };
+}
+
+/** Wat zou samenvoegen met dit bestand veranderen? Schrijft niets. */
+export async function previewMerge(backup: Backup): Promise<MergeStats> {
+  return mergeData(await localSyncData(), syncDataFromBackup(backup)).stats;
+}
+
+/** Voegt een sync-/back-upbestand samen met de lokale gegevens (alles of niets). */
+export async function mergeFromBackup(backup: Backup): Promise<MergeStats> {
+  return db.transaction('rw', db.projects, db.sessions, db.settings, db.deletions, async () => {
+    const result = mergeData(await localSyncData(), syncDataFromBackup(backup));
+    await Promise.all([db.projects.clear(), db.sessions.clear(), db.deletions.clear()]);
+    await db.projects.bulkAdd(result.projects);
+    await db.sessions.bulkAdd(result.sessions);
+    await db.deletions.bulkAdd(result.deletions);
+    if (result.preferences) await setSetting(PREFERENCES_KEY, result.preferences);
+    await setSetting(SETTING_LAST_SYNC, Date.now());
+    return result.stats;
   });
 }

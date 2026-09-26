@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
-import type { Project, Session, Setting } from '../types';
+import { normalizeProject } from '../lib/preferences';
+import type { Deletion, Project, Session, Setting } from '../types';
 
 /** Rustig palet dat in licht én donker thema goed leesbaar is. */
 export const PROJECT_COLORS = [
@@ -25,6 +26,7 @@ export class UrenklokDB extends Dexie {
   projects!: Table<Project, string>;
   sessions!: Table<Session, string>;
   settings!: Table<Setting, string>;
+  deletions!: Table<Deletion, string>;
 
   constructor(name = 'urenklok') {
     super(name);
@@ -33,17 +35,32 @@ export class UrenklokDB extends Dexie {
       sessions: 'id, start, projectId',
       settings: 'key',
     });
+    // v2: tarief, weekdoel en updatedAt op projecten; verwijdermarkeringen voor synchroniseren.
+    this.version(2)
+      .stores({ deletions: 'id' })
+      .upgrade((tx) =>
+        tx
+          .table('projects')
+          .toCollection()
+          .modify((p: Project) => {
+            Object.assign(p, normalizeProject(p));
+          }),
+      );
     this.on('populate', (tx) => {
       const now = Date.now();
       tx.table('projects').bulkAdd(
         DEFAULT_PROJECTS.map(
           (name, i): Project => ({
-            id: newId(),
+            // Vaste id's, zodat de standaardprojecten op elk apparaat gelijk zijn (belangrijk bij synchroniseren).
+            id: `default-${i + 1}`,
             name,
             color: PROJECT_COLORS[i % PROJECT_COLORS.length]!,
             archived: false,
             order: i,
+            hourlyRate: null,
+            weeklyGoalHours: null,
             createdAt: now,
+            updatedAt: 0,
           }),
         ),
       );

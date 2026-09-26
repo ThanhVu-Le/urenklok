@@ -1,7 +1,9 @@
-import type { Project, Session, Setting } from '../types';
+import type { Deletion, Project, Session, Setting } from '../types';
+import { normalizeProject } from './preferences';
 
 export const BACKUP_APP = 'urenklok';
-export const BACKUP_SCHEMA_VERSION = 1;
+/** v1: projecten, sessies, instellingen. v2: + tarief/weekdoel/updatedAt op projecten en verwijdermarkeringen. */
+export const BACKUP_SCHEMA_VERSION = 2;
 
 export interface Backup {
   app: typeof BACKUP_APP;
@@ -10,9 +12,13 @@ export interface Backup {
   projects: Project[];
   sessions: Session[];
   settings: Setting[];
+  deletions: Deletion[];
 }
 
-export function createBackup(data: { projects: Project[]; sessions: Session[]; settings: Setting[] }, now = new Date()): Backup {
+export function createBackup(
+  data: { projects: Project[]; sessions: Session[]; settings: Setting[]; deletions: Deletion[] },
+  now = new Date(),
+): Backup {
   return {
     app: BACKUP_APP,
     schemaVersion: BACKUP_SCHEMA_VERSION,
@@ -40,7 +46,7 @@ export function parseBackup(text: string): ParseResult {
   const projects: Project[] = [];
   for (const [i, p] of raw.projects.entries()) {
     if (!isProject(p)) return fail(`Project ${i + 1} in de back-up is ongeldig.`);
-    projects.push(p);
+    projects.push(normalizeProject(p));
   }
   const projectIds = new Set(projects.map((p) => p.id));
   if (projectIds.size !== projects.length) return fail('De back-up bevat dubbele projecten.');
@@ -58,6 +64,10 @@ export function parseBackup(text: string): ParseResult {
     ? raw.settings.filter((s): s is Setting => isObject(s) && typeof s.key === 'string')
     : [];
 
+  const deletions: Deletion[] = Array.isArray(raw.deletions)
+    ? raw.deletions.filter((d): d is Deletion => isObject(d) && typeof d.id === 'string' && isTime(d.deletedAt))
+    : [];
+
   return {
     ok: true,
     backup: {
@@ -67,6 +77,7 @@ export function parseBackup(text: string): ParseResult {
       projects,
       sessions,
       settings,
+      deletions,
     },
   };
 }
@@ -81,7 +92,8 @@ function isObject(v: unknown): v is Record<string, unknown> {
 
 const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-function isProject(v: unknown): v is Project {
+/** Oudere back-ups missen tarief, weekdoel en updatedAt; die vult normalizeProject aan. */
+function isProject(v: unknown): v is Omit<Project, 'updatedAt' | 'hourlyRate' | 'weeklyGoalHours'> {
   return (
     isObject(v) &&
     typeof v.id === 'string' &&

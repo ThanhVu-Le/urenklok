@@ -6,7 +6,13 @@ export interface Project {
   color: string;
   archived: boolean;
   order: number;
+  /** Uurtarief in euro's, exclusief btw; `null` = geen tarief. */
+  hourlyRate: number | null;
+  /** Streefuren per week voor dit project; `null` = geen doel. */
+  weeklyGoalHours: number | null;
   createdAt: number;
+  /** Laatste wijziging; bepaalt welke versie wint bij samenvoegen. */
+  updatedAt: number;
 }
 
 export interface Pause {
@@ -27,9 +33,28 @@ export interface Session {
   updatedAt: number;
 }
 
+/** Markering van een verwijderde sessie, zodat verwijderen ook via synchroniseren doorwerkt. */
+export interface Deletion {
+  id: string;
+  deletedAt: number;
+}
+
 export interface Setting {
   key: string;
   value: unknown;
+}
+
+/** Voorkeuren die tussen apparaten gesynchroniseerd worden. */
+export interface Preferences {
+  /** Streefuren per week in totaal; `null` = geen doel. */
+  weeklyGoalHours: number | null;
+  /** Waarschuw als een sessie langer dan zoveel uur loopt. */
+  warnAfterHours: number;
+  /** Btw-percentage voor de factuurweergave (0 = geen btw). */
+  vatPercent: number;
+  /** Naam bovenaan de factuurweergave. */
+  businessName: string;
+  updatedAt: number;
 }
 
 export type PeriodKind = 'day' | 'week' | 'month';

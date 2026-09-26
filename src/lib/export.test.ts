@@ -3,7 +3,17 @@ import type { Project, Session } from '../types';
 import { createBackup, parseBackup } from './backup';
 import { csvField, sessionsToCsv } from './csv';
 
-const project: Project = { id: 'p1', name: 'Le Thanh & Co – algemeen', color: '#2f6f5e', archived: false, order: 0, createdAt: 0 };
+const project: Project = {
+  id: 'p1',
+  name: 'Le Thanh & Co – algemeen',
+  color: '#2f6f5e',
+  archived: false,
+  order: 0,
+  hourlyRate: 85,
+  weeklyGoalHours: null,
+  createdAt: 0,
+  updatedAt: 0,
+};
 const projects = new Map([[project.id, project]]);
 
 function at(d: number, h: number, m = 0) {
@@ -62,7 +72,12 @@ describe('CSV-export', () => {
 });
 
 describe('JSON-back-up', () => {
-  const backup = createBackup({ projects: [project], sessions, settings: [{ key: 'lastProjectId', value: 'p1' }] });
+  const backup = createBackup({
+    projects: [project],
+    sessions,
+    settings: [{ key: 'lastProjectId', value: 'p1' }],
+    deletions: [{ id: 'x', deletedAt: 5 }],
+  });
 
   it('leest een eigen back-up volledig terug', () => {
     const result = parseBackup(JSON.stringify(backup));

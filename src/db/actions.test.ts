@@ -4,6 +4,11 @@ import { netMs } from '../lib/time';
 import {
   clockIn,
   clockOut,
+  deleteSession,
+  getPreferences,
+  mergeFromBackup,
+  previewMerge,
+  savePreferences,
   exportAll,
   getActiveSession,
   getSetting,
@@ -70,5 +75,39 @@ describe('back-up', () => {
     await replaceAll(backup);
     expect(await db.projects.count()).toBe(DEFAULT_PROJECTS.length);
     expect(await db.sessions.toArray()).toEqual(backup.sessions);
+  });
+});
+
+describe('synchroniseren', () => {
+  it('voegt een bestand van een ander apparaat samen, inclusief verwijderingen', async () => {
+    const [project] = await db.projects.toArray();
+    await clockIn(project!.id, 1000);
+    await clockOut(5000);
+    const [mine] = await db.sessions.toArray();
+
+    // "Ander apparaat": zelfde standaardprojecten, één eigen sessie, en de sessie van hier verwijderd.
+    const other = await exportAll();
+    other.sessions = [{ ...mine!, id: 'telefoon-1', start: 10_000, end: 20_000 }];
+    other.deletions = [{ id: mine!.id, deletedAt: Date.now() + 1000 }];
+
+    expect(await previewMerge(other)).toMatchObject({ sessionsAdded: 1, sessionsRemoved: 1 });
+    await mergeFromBackup(other);
+    expect((await db.sessions.toArray()).map((s) => s.id)).toEqual(['telefoon-1']);
+    expect(await db.projects.count()).toBe(DEFAULT_PROJECTS.length);
+  });
+
+  it('verwijderen legt een markering vast', async () => {
+    const [project] = await db.projects.toArray();
+    const s = await clockIn(project!.id, 0);
+    await deleteSession(s.id);
+    expect(await db.deletions.get(s.id)).toBeDefined();
+  });
+
+  it('voorkeuren opslaan en lezen', async () => {
+    expect((await getPreferences()).businessName).toBe('Le Thanh & Co');
+    await savePreferences({ weeklyGoalHours: 32 });
+    const prefs = await getPreferences();
+    expect(prefs.weeklyGoalHours).toBe(32);
+    expect(prefs.updatedAt).toBeGreaterThan(0);
   });
 });

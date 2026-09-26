@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { SETTING_LAST_PROJECT } from '../db/actions';
-import type { Project, Range, Session } from '../types';
+import { normalizePreferences, PREFERENCES_KEY } from '../lib/preferences';
+import type { Preferences, Project, Range, Session } from '../types';
 
 const MAX_SESSION_MS = 8 * 24 * 60 * 60_000;
 
@@ -32,4 +33,9 @@ export function useLastProjectId(): string | undefined | null {
 
 export function projectMap(projects: Project[] | undefined): Map<string, Project> {
   return new Map((projects ?? []).map((p) => [p.id, p]));
+}
+
+/** Gesynchroniseerde voorkeuren (weekdoel, btw, bedrijfsnaam…), altijd compleet ingevuld. */
+export function usePreferences(): Preferences | undefined {
+  return useLiveQuery(async () => normalizePreferences((await db.settings.get(PREFERENCES_KEY))?.value));
 }
