@@ -819,3 +819,21 @@ dialog.modal::backdrop {
     transition: none !important;
   }
 }
+
+@media (max-width: 480px) {
+  .hide-narrow {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .project-row .row {
+    gap: 2px;
+  }
+  .project-row .project-name {
+    min-width: 0;
+    margin-right: 4px;
+  }
+  .project-row .btn-icon {
+    width: 32px;
+  }
+}
