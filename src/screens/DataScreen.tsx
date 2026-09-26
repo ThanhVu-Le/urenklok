@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { DownloadIcon, UploadIcon } from '../components/Icons';
 import { ConfirmDialog } from '../components/Modal';
+import { SyncCard } from '../components/SyncCard';
 import { useToast } from '../components/Toast';
 import { exportAll, replaceAll, setSetting, SETTING_LAST_BACKUP } from '../db/actions';
 import { db } from '../db/db';
@@ -120,24 +121,28 @@ export function DataScreen() {
           </button>
           {preview && (
             <span className="muted small tabular">
-              {preview.count} sessies · {formatDecimalNl(decimalHours(preview.ms))} uur
+              {preview.count} {preview.count === 1 ? 'sessie' : 'sessies'} · {formatDecimalNl(decimalHours(preview.ms))} uur
             </span>
           )}
         </div>
       </section>
+
+      <SyncCard />
 
       <section className="card screen" style={{ gap: 12 }}>
         <div>
           <h2>Back-up</h2>
           <p className="muted small">
             Je gegevens staan alleen in deze browser op dit apparaat. Maak regelmatig een back-up (JSON) en bewaar die
-            bijvoorbeeld in je cloudmap.
+            bijvoorbeeld in je cloudmap. Terugzetten vervangt alles; wil je gegevens van een ander apparaat
+            toevoegen, gebruik dan Synchroniseren.
           </p>
         </div>
         <p className="small">
           {counts && (
             <>
-              {counts.projects} projecten · {counts.sessions} sessies ·{' '}
+              {counts.projects} {counts.projects === 1 ? 'project' : 'projecten'} · {counts.sessions}{' '}
+              {counts.sessions === 1 ? 'sessie' : 'sessies'} ·{' '}
             </>
           )}
           <span className="muted">

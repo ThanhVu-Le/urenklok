@@ -978,3 +978,10 @@ dialog.modal::backdrop {
   border-color: var(--pause);
   box-shadow: none;
 }
+.merge-stats {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
