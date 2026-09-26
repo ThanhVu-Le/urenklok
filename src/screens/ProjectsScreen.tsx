@@ -2,9 +2,9 @@ import { useState, type CSSProperties, type FormEvent } from 'react';
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, PlusIcon } from '../components/Icons';
 import { NumberField } from '../components/NumberField';
 import { useToast } from '../components/Toast';
-import { addProject, moveProject, updateProject } from '../db/actions';
+import { addProject, moveProject, savePreferences, updateProject } from '../db/actions';
 import { PROJECT_COLORS } from '../db/db';
-import { useActiveSession, useProjects } from '../hooks/useData';
+import { useActiveSession, usePreferences, useProjects } from '../hooks/useData';
 import { formatNumberNl } from '../lib/dates';
 import { formatEuro } from '../lib/invoice';
 import type { Project } from '../types';
@@ -12,6 +12,7 @@ import type { Project } from '../types';
 export function ProjectsScreen() {
   const projects = useProjects();
   const active = useActiveSession();
+  const prefs = usePreferences();
   const toast = useToast();
   const [name, setName] = useState('');
   const [color, setColor] = useState(PROJECT_COLORS[0]!);
@@ -96,6 +97,31 @@ export function ProjectsScreen() {
           </ul>
         )}
       </section>
+
+      {prefs && (
+        <section className="card screen" style={{ gap: 12 }}>
+          <div>
+            <h2>Doelen</h2>
+            <p className="muted small">
+              Weekdoelen per project stel je in bij de projectdetails (klik op het kleurbolletje).
+            </p>
+          </div>
+          <div className="form-grid">
+            <NumberField
+              key={`goal-${prefs.weeklyGoalHours}`}
+              label="Weekdoel totaal (uren)"
+              value={prefs.weeklyGoalHours}
+              onSave={(v) => savePreferences({ weeklyGoalHours: v })}
+            />
+            <NumberField
+              key={`warn-${prefs.warnAfterHours}`}
+              label="Waarschuwen als een sessie langer loopt dan (uren)"
+              value={prefs.warnAfterHours}
+              onSave={(v) => savePreferences({ warnAfterHours: v ?? 10 })}
+            />
+          </div>
+        </section>
+      )}
 
       {archived.length > 0 && (
         <section className="card">

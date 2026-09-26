@@ -964,3 +964,17 @@ dialog.modal::backdrop {
     margin: 18mm;
   }
 }
+
+/* ===== Doelen en waarschuwingen ===== */
+.goal-reached {
+  color: var(--accent);
+  font-weight: 600;
+}
+.warning-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--pause-soft);
+  border-color: var(--pause);
+  box-shadow: none;
+}

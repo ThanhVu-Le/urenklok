@@ -42,15 +42,19 @@ export async function clockIn(projectId: string, now = Date.now()): Promise<Sess
   });
 }
 
-/** Stopt de lopende sessie (en een eventueel lopende pauze). */
-export async function clockOut(now = Date.now()): Promise<void> {
+/**
+ * Stopt de lopende sessie (en een eventueel lopende pauze). Met een eerder eindtijdstip
+ * (vergeten uit te klokken) worden latere pauzes weggelaten of ingekort.
+ */
+export async function clockOut(end = Date.now()): Promise<void> {
   await db.transaction('rw', db.sessions, async () => {
     const active = await getActiveSession();
     if (!active) return;
+    const at = Math.max(end, active.start);
     await db.sessions.update(active.id, {
-      end: Math.max(now, active.start),
-      pauses: closePauses(active.pauses, now),
-      updatedAt: now,
+      end: at,
+      pauses: closePauses(active.pauses.filter((p) => p.start < at), at),
+      updatedAt: Date.now(),
     });
   });
 }
@@ -68,8 +72,8 @@ export async function togglePause(now = Date.now()): Promise<void> {
   });
 }
 
-function closePauses(pauses: Pause[], now: number): Pause[] {
-  return pauses.map((p) => (p.end === null ? { ...p, end: Math.max(now, p.start) } : p));
+function closePauses(pauses: Pause[], at: number): Pause[] {
+  return pauses.map((p) => (p.end === null || p.end > at ? { ...p, end: Math.max(at, p.start) } : p));
 }
 
 // ---------- Sessies ----------

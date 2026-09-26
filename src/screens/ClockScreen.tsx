@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PauseIcon, PlayIcon, PlusIcon, StopIcon } from '../components/Icons';
+import { LongSessionWarning } from '../components/LongSessionWarning';
+import { WeekGoals } from '../components/WeekGoals';
 import { SessionForm } from '../components/SessionForm';
 import { SessionList } from '../components/SessionList';
 import { useToast } from '../components/Toast';
@@ -41,6 +43,7 @@ export function ClockScreen({ clock }: { clock: ClockController }) {
 
   return (
     <div className="screen">
+      {active && <LongSessionWarning session={active} now={now} />}
       <section className="card clock" data-state={state} aria-label="Klok">
         <div className="clock-status">
           <span className="status-dot" aria-hidden="true" />
@@ -94,6 +97,8 @@ export function ClockScreen({ clock }: { clock: ClockController }) {
       </section>
 
       {active && <NoteEditor key={active.id} session={active} />}
+
+      <WeekGoals now={now} />
 
       <section className="card" aria-label="Vandaag">
         <div className="card-title">

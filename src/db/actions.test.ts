@@ -56,6 +56,19 @@ describe('database', () => {
     expect(netMs(s!, 0)).toBe(10 * MIN);
   });
 
+  it('uitklokken op een eerder tijdstip kort latere pauzes in', async () => {
+    const [project] = await db.projects.toArray();
+    await clockIn(project!.id, 0);
+    await togglePause(60 * MIN);
+    await togglePause(90 * MIN);
+    await togglePause(600 * MIN); // pauze die nog loopt
+    await clockOut(80 * MIN); // "eigenlijk om 80 min gestopt"
+    const [s] = await db.sessions.toArray();
+    expect(s!.end).toBe(80 * MIN);
+    expect(s!.pauses).toEqual([{ start: 60 * MIN, end: 80 * MIN }]);
+    expect(netMs(s!, 0)).toBe(60 * MIN);
+  });
+
   it('dubbel inklokken maakt geen tweede sessie', async () => {
     const [project] = await db.projects.toArray();
     await clockIn(project!.id, 0);

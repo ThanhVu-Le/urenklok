@@ -4,7 +4,7 @@ import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, FileIcon, PlusIcon } f
 import { SessionForm } from '../components/SessionForm';
 import { SessionList } from '../components/SessionList';
 import { useToast } from '../components/Toast';
-import { projectMap, useProjects, useSessionsInRange } from '../hooks/useData';
+import { projectMap, usePreferences, useProjects, useSessionsInRange } from '../hooks/useData';
 import { useNow } from '../hooks/useNow';
 import {
   daysInRange,
@@ -36,6 +36,7 @@ export function OverviewScreen() {
   const now = useNow(1000);
 
   const projects = useProjects();
+  const prefs = usePreferences();
   const byId = useMemo(() => projectMap(projects), [projects]);
 
   const range = useMemo(() => periodRange(kind, anchor), [kind, anchor]);
@@ -100,6 +101,12 @@ export function OverviewScreen() {
             <div className="stat-total">{formatDuration(totals.total)}</div>
             <p className="muted small tabular">
               {formatDecimalNl(decimalHours(totals.total))} uur
+              {kind === 'week' && prefs?.weeklyGoalHours && (
+                <>
+                  {' '}
+                  · doel {prefs.weeklyGoalHours} u ({Math.round((decimalHours(totals.total) / prefs.weeklyGoalHours) * 100)}%)
+                </>
+              )}
               {kind !== 'day' && workedDays > 0 && (
                 <>
                   {' '}
