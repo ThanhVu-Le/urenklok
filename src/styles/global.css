@@ -12,6 +12,7 @@
   --accent-soft: #e3efeb;
   --danger: #b3261e;
   --danger-soft: #fbe9e7;
+  --stop: #b3261e;
   --warn: #9a6400;
   --pause: #b7791f;
   --pause-soft: #fbf0dc;
@@ -36,6 +37,7 @@
     --accent-soft: #1f3530;
     --danger: #f2877f;
     --danger-soft: #3a2224;
+    --stop: #b8413a;
     --warn: #e0b35a;
     --pause: #e0b35a;
     --pause-soft: #3a3020;
@@ -541,9 +543,9 @@ dialog.modal::backdrop {
   transform: none;
 }
 .clock-button[data-running='true'] {
-  background: var(--danger);
+  background: var(--stop);
   color: #fff;
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--danger) 30%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--stop) 30%, transparent);
 }
 .clock-button svg {
   width: 34px;

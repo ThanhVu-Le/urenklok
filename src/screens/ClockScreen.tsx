@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PauseIcon, PlayIcon, StopIcon } from '../components/Icons';
+import { PauseIcon, PlayIcon, PlusIcon, StopIcon } from '../components/Icons';
+import { SessionForm } from '../components/SessionForm';
+import { SessionList } from '../components/SessionList';
+import { useToast } from '../components/Toast';
 import { ProjectSelect } from '../components/ProjectSelect';
 import { updateSession } from '../db/actions';
 import type { ClockController } from '../hooks/useClock';
@@ -13,6 +16,8 @@ export function ClockScreen({ clock }: { clock: ClockController }) {
   const { active, paused, projects, projectId } = clock;
   const now = useNow(1000);
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const toast = useToast();
 
   // Vandaag-bereik alleen herberekenen als de datum verandert.
   const today = dayKey(now);
@@ -92,13 +97,31 @@ export function ClockScreen({ clock }: { clock: ClockController }) {
 
       <section className="card" aria-label="Vandaag">
         <div className="card-title">
-          <h2>Vandaag</h2>
-          <span className="session-duration">{formatDuration(todayTotal)}</span>
+          <div>
+            <h2>
+              Vandaag · <span className="tabular">{formatDuration(todayTotal)}</span>
+            </h2>
+            <p className="muted small">{formatDayLong(now)}</p>
+          </div>
+          <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>
+            <PlusIcon /> Sessie toevoegen
+          </button>
         </div>
-        <p className="muted small" style={{ textTransform: 'capitalize' }}>
-          {formatDayLong(now)}
-        </p>
+        <SessionList
+          sessions={todaySessions ?? []}
+          projects={projects}
+          now={now}
+          emptyText="Vandaag nog niet gewerkt."
+        />
       </section>
+
+      <SessionForm
+        open={adding}
+        onClose={() => setAdding(false)}
+        projects={projects}
+        defaultProjectId={projectId}
+        onSaved={toast}
+      />
     </div>
   );
 }
