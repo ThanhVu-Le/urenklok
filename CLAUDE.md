@@ -22,12 +22,16 @@ src/types.ts          datamodel (Project, Session, Pause, Setting, Range)
 src/lib/time.ts       ALLE rekenlogica voor gewerkte tijd (puur, getest)
 src/lib/dates.ts      formatteren en periodegrenzen (dag / ISO-week / maand)
 src/lib/csv.ts        CSV-opbouw (puur); csvExport.ts = db-query + download
-src/lib/backup.ts     JSON-back-up maken en valideren (puur)
+src/lib/backup.ts     JSON-back-up/sync-bestand maken en valideren (puur; schemaVersion 2, v1 blijft leesbaar)
+src/lib/merge.ts      samenvoegen van twee apparaten (puur, getest)
+src/lib/invoice.ts    bedragen, euro-notatie en factuurregels (puur, getest)
+src/lib/goals.ts      weekdoelen en "vergeten uit te klokken" (puur, getest)
+src/lib/preferences.ts  gesynchroniseerde voorkeuren + normaliseren van oudere projecten
 src/db/db.ts          Dexie-schema + seed standaardprojecten
 src/db/actions.ts     alle schrijfacties (klokken, CRUD, back-up terugzetten)
 src/hooks/            useData (live queries), useClock, useNow, useRoute, useSpacebar
 src/components/       Modal/ConfirmDialog, SessionForm, SessionList, BarChart, ProjectSelect, Toast, Icons
-src/screens/          ClockScreen (startscherm), OverviewScreen, ProjectsScreen, DataScreen
+src/screens/          ClockScreen (startscherm), OverviewScreen, ProjectsScreen, DataScreen, InvoiceScreen (#/factuur/jjjj-mm)
 ```
 
 ## Datamodel en regels
@@ -38,6 +42,10 @@ src/screens/          ClockScreen (startscherm), OverviewScreen, ProjectsScreen,
 - Dag-/week-/maandtotalen gebruiken `totalsInRange`, die sessies op lokale middernacht knipt (DST-veilig). CSV-regels horen bij de startdatum.
 - Schemawijziging? Verhoog de Dexie-versie in `db.ts` met een upgrade-functie en verhoog `BACKUP_SCHEMA_VERSION` in `backup.ts` als het back-upformaat verandert. Oude back-ups moeten importeerbaar blijven.
 - Database-schrijfacties gaan via `src/db/actions.ts`.
+- **Synchroniseren hangt af van `updatedAt`**: elke wijziging aan een project of sessie moet `updatedAt` bijwerken, en elke verwijderde sessie moet een markering in `deletions` krijgen (`deleteSession` doet dit). Projecten worden nooit verwijderd, alleen gearchiveerd.
+- Standaardprojecten hebben vaste id's (`default-1` … `default-5`); samenvoegen koppelt verder op projectnaam.
+- Gedeelde voorkeuren (weekdoel, waarschuwingsduur, btw, bedrijfsnaam) staan in setting `preferences` en synchroniseren mee; `lastProjectId`, `lastBackupAt` en `lastSyncAt` zijn per apparaat.
+- Bedragen: `amountFor` = afgeronde decimale uren × tarief, afgerond op centen. Niet elders zelf uitrekenen.
 
 ## UI-afspraken
 
