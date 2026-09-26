@@ -8,6 +8,7 @@ import { useSpacebar } from './hooks/useSpacebar';
 import { formatClock } from './lib/dates';
 import { netMs } from './lib/time';
 import { ClockScreen } from './screens/ClockScreen';
+import { OverviewScreen } from './screens/OverviewScreen';
 
 const NAV: { route: Route; label: string; icon: typeof ClockIcon }[] = [
   { route: 'klok', label: 'Klok', icon: ClockIcon },
@@ -61,7 +62,7 @@ function Shell() {
       </nav>
       <main className="app-main">
         {route === 'klok' && <ClockScreen clock={clock} />}
-        {route === 'overzicht' && <p className="muted">Overzicht volgt.</p>}
+        {route === 'overzicht' && <OverviewScreen />}
         {route === 'projecten' && <p className="muted">Projecten volgt.</p>}
         {route === 'gegevens' && <p className="muted">Gegevens volgt.</p>}
       </main>
