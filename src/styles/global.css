@@ -269,6 +269,7 @@ button {
   font-weight: 500;
   font-size: 0.92rem;
   white-space: nowrap;
+  text-decoration: none;
   transition:
     background 0.15s,
     border-color 0.15s,
@@ -835,5 +836,131 @@ dialog.modal::backdrop {
   }
   .project-row .btn-icon {
     width: 32px;
+  }
+}
+
+.project-summary {
+  align-self: flex-start;
+  margin: -4px 0 0 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.project-summary:hover {
+  color: var(--text);
+}
+.project-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 4px 44px;
+}
+@media (max-width: 480px) {
+  .project-details,
+  .project-summary {
+    padding-left: 0;
+    margin-left: 0;
+  }
+}
+
+/* ===== Factuur ===== */
+.invoice {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.invoice-business {
+  font-size: 1.3rem;
+  font-weight: 650;
+}
+.invoice-meta {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 14px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.invoice-meta dt {
+  color: var(--text-muted);
+}
+.invoice-meta dd {
+  margin: 0;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.invoice-table th,
+.invoice-table td {
+  text-align: left;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.invoice-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.invoice-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.invoice-table .nowrap {
+  white-space: nowrap;
+}
+.invoice-table tfoot td {
+  border-bottom: 0;
+  font-weight: 600;
+}
+.invoice-table tfoot tr:first-child td {
+  border-top: 2px solid var(--text);
+}
+.invoice-total td {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+    --bg: #fff;
+    --surface: #fff;
+    --border: #d4d4d4;
+    --text: #000;
+    --text-muted: #555;
+  }
+  .nav,
+  .no-print,
+  .toast {
+    display: none !important;
+  }
+  .app-main {
+    padding: 0;
+    max-width: none;
+  }
+  .card.invoice {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+  @page {
+    margin: 18mm;
   }
 }

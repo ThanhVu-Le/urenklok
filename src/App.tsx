@@ -11,6 +11,7 @@ import { netMs } from './lib/time';
 import { ClockScreen } from './screens/ClockScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { DataScreen } from './screens/DataScreen';
+import { InvoiceScreen } from './screens/InvoiceScreen';
 import { ProjectsScreen } from './screens/ProjectsScreen';
 
 const NAV: { route: Route; label: string; icon: typeof ClockIcon }[] = [
@@ -57,7 +58,7 @@ function Shell() {
             {liveTimer && <span className="brand-live">{liveTimer}</span>}
           </a>
           {NAV.map(({ route: r, label, icon: Icon }) => (
-            <a key={r} href={routeHref(r)} aria-current={route === r ? 'page' : undefined}>
+            <a key={r} href={routeHref(r)} aria-current={route === r || (route === 'factuur' && r === 'overzicht') ? 'page' : undefined}>
               <Icon />
               {label}
             </a>
@@ -69,6 +70,7 @@ function Shell() {
         {route === 'overzicht' && <OverviewScreen />}
         {route === 'projecten' && <ProjectsScreen />}
         {route === 'gegevens' && <DataScreen />}
+        {route === 'factuur' && <InvoiceScreen />}
       </main>
     </div>
   );

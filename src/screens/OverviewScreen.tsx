@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { BarChart } from '../components/BarChart';
-import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon } from '../components/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, FileIcon, PlusIcon } from '../components/Icons';
 import { SessionForm } from '../components/SessionForm';
 import { SessionList } from '../components/SessionList';
 import { useToast } from '../components/Toast';
@@ -11,11 +11,13 @@ import {
   decimalHours,
   formatDecimalNl,
   formatDuration,
+  toDateInput,
   periodLabel,
   periodRange,
   shiftPeriod,
 } from '../lib/dates';
 import { exportCsv } from '../lib/csvExport';
+import { amountFor, formatEuro } from '../lib/invoice';
 import { totalsInRange } from '../lib/time';
 import type { PeriodKind } from '../types';
 
@@ -46,6 +48,10 @@ export function OverviewScreen() {
   const projectRows = [...totals.perProject.entries()]
     .filter(([, ms]) => ms > 0)
     .sort((a, b) => b[1] - a[1]);
+  const amounts = new Map(projectRows.map(([pid, ms]) => [pid, amountFor(ms, byId.get(pid)?.hourlyRate ?? null)]));
+  const hasRates = projectRows.some(([pid]) => byId.get(pid)?.hourlyRate);
+  const revenue = [...amounts.values()].reduce((a, b) => a + b, 0);
+  const invoiceMonth = toDateInput(range.start).slice(0, 7);
 
   return (
     <div className="screen">
@@ -103,6 +109,14 @@ export function OverviewScreen() {
               )}
             </p>
           </div>
+          {hasRates && (
+            <div style={{ textAlign: 'right' }}>
+              <p className="muted small">Omzet (excl. btw)</p>
+              <div className="stat-total" style={{ fontSize: '1.5rem' }}>
+                {formatEuro(revenue)}
+              </div>
+            </div>
+          )}
         </div>
 
         {projectRows.length === 0 ? (
@@ -120,7 +134,11 @@ export function OverviewScreen() {
                     <span>{project?.name ?? 'Onbekend project'}</span>
                   </span>
                   <span className="tabular">
-                    {formatDuration(ms)} <span className="muted small">· {Math.round(pct)}%</span>
+                    {formatDuration(ms)}{' '}
+                    <span className="muted small">
+                      · {Math.round(pct)}%
+                      {byId.get(pid)?.hourlyRate ? <> · {formatEuro(amounts.get(pid) ?? 0)}</> : null}
+                    </span>
                   </span>
                   <div className="project-bar-track">
                     <div className="project-bar-fill" style={{ width: `${pct}%` }} />
@@ -155,6 +173,9 @@ export function OverviewScreen() {
             >
               <DownloadIcon /> CSV
             </button>
+            <a className="btn btn-sm" href={`#/factuur/${invoiceMonth}`}>
+              <FileIcon /> Factuur
+            </a>
             <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>
               <PlusIcon /> Sessie toevoegen
             </button>

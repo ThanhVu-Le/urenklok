@@ -156,3 +156,8 @@ export function daysInRange(range: Range): number[] {
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
+
+/** Getal met komma en zonder overbodige nullen: 7.5 → "7,5", 8 → "8". */
+export function formatNumberNl(n: number): string {
+  return String(Math.round(n * 100) / 100).replace('.', ',');
+}

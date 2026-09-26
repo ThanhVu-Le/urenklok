@@ -1,9 +1,12 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, PlusIcon } from '../components/Icons';
+import { NumberField } from '../components/NumberField';
 import { useToast } from '../components/Toast';
 import { addProject, moveProject, updateProject } from '../db/actions';
 import { PROJECT_COLORS } from '../db/db';
 import { useActiveSession, useProjects } from '../hooks/useData';
+import { formatNumberNl } from '../lib/dates';
+import { formatEuro } from '../lib/invoice';
 import type { Project } from '../types';
 
 export function ProjectsScreen() {
@@ -142,7 +145,7 @@ function ProjectRow({ project, isFirst, isLast, inUse, nameTaken }: RowProps) {
         <button
           type="button"
           className="btn btn-ghost btn-icon"
-          aria-label={`Kleur van ${project.name} wijzigen`}
+          aria-label={`Details van ${project.name}: kleur, tarief en weekdoel`}
           aria-expanded={showColors}
           onClick={() => setShowColors((v) => !v)}
         >
@@ -198,9 +201,34 @@ function ProjectRow({ project, isFirst, isLast, inUse, nameTaken }: RowProps) {
           <span className="hide-narrow">{project.archived ? 'Terughalen' : 'Archiveren'}</span>
         </button>
       </div>
+      {!showColors && (project.hourlyRate || project.weeklyGoalHours) && (
+        <button type="button" className="project-summary" onClick={() => setShowColors(true)}>
+          {[
+            project.hourlyRate && `${formatEuro(project.hourlyRate)}/u`,
+            project.weeklyGoalHours && `doel ${formatNumberNl(project.weeklyGoalHours)} u/week`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </button>
+      )}
       {showColors && (
-        <div style={{ paddingLeft: 44 }}>
-          <ColorPicker value={project.color} onChange={(c) => void updateProject(project.id, { color: c })} />
+        <div className="project-details">
+          <div className="field">
+            <span>Kleur</span>
+            <ColorPicker value={project.color} onChange={(c) => void updateProject(project.id, { color: c })} />
+          </div>
+          <div className="form-grid">
+            <NumberField
+              label="Uurtarief (€, excl. btw)"
+              value={project.hourlyRate}
+              onSave={(v) => updateProject(project.id, { hourlyRate: v })}
+            />
+            <NumberField
+              label="Weekdoel (uren)"
+              value={project.weeklyGoalHours}
+              onSave={(v) => updateProject(project.id, { weeklyGoalHours: v })}
+            />
+          </div>
         </div>
       )}
     </li>
