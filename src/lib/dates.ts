@@ -5,6 +5,7 @@ import {
   differenceInCalendarDays,
   endOfISOWeek,
   format,
+  getDay,
   getISOWeek,
   getISOWeekYear,
   isSameDay,
@@ -12,9 +13,10 @@ import {
   startOfDay,
   startOfISOWeek,
   startOfMonth,
+  subDays,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import type { PeriodKind, Range } from '../types';
+import type { Evaluation, PeriodKind, Range } from '../types';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -151,6 +153,84 @@ export function daysInRange(range: Range): number[] {
     days.push(d.getTime());
   }
   return days;
+}
+
+// ---------- Weekevaluatie (zaterdag 00:00 t/m vrijdag 23:59) ----------
+
+const FRIDAY = 5;
+/** Zo ver kijkt de evaluatie standaard terug naar een openstaande vrijdag. */
+const OPEN_LOOKBACK_WEEKS = 8;
+
+/** Begin van de vrijdag op of vóór `t`: op vrijdag die dag zelf, op zaterdag de dag ervoor. */
+export function evaluationFriday(t: number | Date): number {
+  const day = startOfDay(t);
+  return subDays(day, (getDay(day) - FRIDAY + 7) % 7).getTime();
+}
+
+/** Evaluatieperiode die eindigt op de vrijdag `friday`: zaterdag 00:00 t/m vrijdag 23:59 (einde exclusief). */
+export function evaluationRange(friday: number | Date): Range {
+  const f = startOfDay(friday);
+  return { start: subDays(f, 6).getTime(), end: addDays(f, 1).getTime() };
+}
+
+/** Sleutel van een evaluatie: datum van de vrijdag, jjjj-mm-dd. */
+export function evaluationKey(friday: number | Date): string {
+  return dayKey(friday);
+}
+
+/** Tijdstip (begin van de dag) van een evaluatiesleutel, of `null` als het geen geldige vrijdag is. */
+export function parseEvaluationKey(key: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const d = parse(key, 'yyyy-MM-dd', new Date());
+  if (Number.isNaN(d.getTime()) || dayKey(d) !== key || getDay(d) !== FRIDAY) return null;
+  return d.getTime();
+}
+
+/** Schuift een evaluatiesleutel `weeks` vrijdagen op. */
+export function shiftFriday(key: string, weeks: number): string {
+  const t = parseEvaluationKey(key);
+  if (t === null) throw new Error(`Geen geldige vrijdag: ${key}`);
+  return evaluationKey(addWeeks(t, weeks));
+}
+
+type EvaluationStatus = Pick<Evaluation, 'id' | 'status'>;
+
+function isCompleted(key: string, evaluations: EvaluationStatus[]): boolean {
+  return evaluations.some((e) => e.id === key && e.status === 'afgerond');
+}
+
+/**
+ * Openstaande evaluatie voor de melding op het klokscherm: de meest recente vrijdag (vandaag of eerder)
+ * als die nog niet is afgerond. Zo blijft de melding van vrijdag t/m de donderdag erna staan.
+ */
+export function openEvaluation(
+  now: number,
+  evaluations: EvaluationStatus[],
+): { key: string; friday: number; isToday: boolean } | null {
+  const friday = evaluationFriday(now);
+  const key = evaluationKey(friday);
+  if (isCompleted(key, evaluations)) return null;
+  return { key, friday, isToday: isSameDay(friday, now) };
+}
+
+/**
+ * Welke vrijdag het evaluatiescherm standaard opent: op vrijdag vandaag, anders de meest recente
+ * vrijdag zonder afgeronde evaluatie (hooguit 8 weken terug), anders de laatste vrijdag.
+ */
+export function defaultEvaluationKey(now: number, evaluations: EvaluationStatus[]): string {
+  const latest = evaluationKey(evaluationFriday(now));
+  if (isSameDay(evaluationFriday(now), now)) return latest;
+  for (let i = 0; i < OPEN_LOOKBACK_WEEKS; i++) {
+    const key = shiftFriday(latest, -i);
+    if (!isCompleted(key, evaluations)) return key;
+  }
+  return latest;
+}
+
+/** Bijv. "za 20-09 – vr 26-09-2026". */
+export function evaluationPeriodLabel(friday: number): string {
+  const { start } = evaluationRange(friday);
+  return `${format(start, 'EEEEEE dd-MM', { locale: nl })} – ${format(friday, 'EEEEEE dd-MM-yyyy', { locale: nl })}`;
 }
 
 function pad(n: number): string {

@@ -65,3 +65,36 @@ export interface Range {
   /** Exclusief. */
   end: number;
 }
+
+/** Oordeel over een focuspunt van de vorige evaluatie. */
+export type FocusResult = 'gelukt' | 'deels' | 'niet';
+
+export interface FocusReview {
+  text: string;
+  /** `null` = nog niet beoordeeld. */
+  result: FocusResult | null;
+}
+
+/**
+ * Weekevaluatie. Een evaluatieperiode loopt van zaterdag 00:00 t/m vrijdag 23:59;
+ * de evaluatie hoort bij die vrijdag. Uren worden niet opgeslagen maar altijd uit de sessies berekend.
+ */
+export interface Evaluation {
+  /** Datum van de vrijdag, jjjj-mm-dd. Maximaal één evaluatie per vrijdag. */
+  id: string;
+  status: 'concept' | 'afgerond';
+  /** Weekdoel (uren) op het moment van opslaan; `null` = geen doel. */
+  goalHours: number | null;
+  /** Cijfer 1–10; `null` = nog niet ingevuld. */
+  rating: number | null;
+  wentWell: string;
+  wentLess: string;
+  lesson: string;
+  /** Focuspunten voor de volgende week (maximaal 3). */
+  focus: string[];
+  /** Terugblik op de focuspunten van de vorige evaluatie. */
+  focusReview: FocusReview[];
+  createdAt: number;
+  updatedAt: number;
+  completedAt: number | null;
+}
