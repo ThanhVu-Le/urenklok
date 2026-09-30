@@ -9,6 +9,13 @@ Urenregistratie voor **Le Thanh & Co**. Eén gebruiker, geen account, geen serve
 - **Overzicht** per dag, ISO-week (maandag t/m zondag) en maand: totaal, verdeling per project en een staafdiagram per dag. Sessies toevoegen, bewerken en verwijderen (met bevestiging in de app).
 - **Projecten**: toevoegen, hernoemen, kleur kiezen, volgorde wijzigen en archiveren. Per project een **uurtarief** en een **weekdoel** (klik op het kleurbolletje).
 - **Weekdoelen**: een doel voor de hele week en/of per project, met voortgang op het klokscherm. Loopt een sessie langer dan ingesteld (standaard 10 uur), dan krijg je een waarschuwing en kun je met terugwerkende kracht uitklokken.
+- **Weekevaluatie** (menu *Evaluatie*, of *Week evalueren* op het Overzicht): elke vrijdag kijk je terug op de periode van zaterdag 00:00 t/m vrijdag 23:59. Op vrijdag staat op het klokscherm *"Tijd voor je weekevaluatie"*; is die niet afgerond, dan blijft de melding t/m donderdag staan. De evaluatie heeft vier stappen:
+  1. **Cijfers** (automatisch): uren t.o.v. het weekdoel, verdeling per project, gewerkte dagen, langste/kortste dag, gemiddelde sessieduur, vergelijking met het gemiddelde van de 4 perioden ervoor, sessies zonder notitie en keren "vergeten uit te klokken".
+  2. **Terugblik** op de focuspunten van de vorige evaluatie: gelukt / deels / niet gelukt.
+  3. **Reflectie**: cijfer 1–10, wat ging goed, wat ging minder goed, belangrijkste les en maximaal 3 focuspunten voor volgende week.
+  4. **Conclusie**: *Wat ging goed*, *Werkpunten* en *Komende weken en maanden* (trends over de laatste 4–12 perioden en terugkerende focuspunten).
+
+  Je kunt tussentijds een concept opslaan (gebeurt ook automatisch bij het wisselen van stap) en eerdere evaluaties later openen en bewerken. Een lopende sessie loopt tijdens de evaluatie gewoon door; de balk bovenin toont de timer.
 - **Factuurweergave** (Overzicht → *Factuur*): printbare urenspecificatie per maand, per sessie of per project, met bedragen, btw en je bedrijfsnaam. Via *Afdrukken → Opslaan als PDF* heb je een bijlage voor je factuur.
 - **Gegevens**: CSV-export voor Nederlandse Excel, **synchroniseren** tussen apparaten en een JSON-back-up die je kunt terugzetten.
 
@@ -37,7 +44,7 @@ Open daarna http://localhost:5173.
 
 | Commando          | Wat het doet                                                      |
 | ----------------- | ----------------------------------------------------------------- |
-| `npm test`        | Tests (Vitest) voor tijdberekeningen, export en database          |
+| `npm test`        | Tests (Vitest) voor tijdberekeningen, evaluatie, export en database |
 | `npm run lint`    | ESLint                                                            |
 | `npm run build`   | Typecheck + productiebuild in `dist/`                             |
 | `npm run preview` | De productiebuild lokaal serveren op http://localhost:4173        |
@@ -92,7 +99,7 @@ Zonder account of server, via een bestand:
 
 Regels bij samenvoegen:
 
-- Per sessie en per project wint de **laatst gewijzigde** versie.
+- Per sessie, project en weekevaluatie wint de **laatst gewijzigde** versie.
 - Een sessie die je op het ene apparaat verwijdert, wordt bij samenvoegen ook op het andere verwijderd (tenzij hij daar later nog is aangepast).
 - Projecten met dezelfde naam worden als hetzelfde project gezien.
 - Liep er op beide apparaten een sessie, dan wordt de oudste gestopt op het moment dat de nieuwste begon.
@@ -111,7 +118,16 @@ Kolommen: `Datum;Start;Eind;Pauze (min);Netto uren;Project;Notitie`
 - In de overzichten wordt een sessie over middernacht (of over een week-/maandgrens) eerlijk verdeeld over beide dagen. In de CSV staat hij als één regel op de startdatum.
 - Wijzig je bij een bestaande sessie de pauzeduur, dan wordt de pauze als één blok midden in de sessie opgeslagen.
 - Bedragen = netto uren (afgerond op 2 decimalen) × uurtarief, afgerond op centen. Tarieven zijn exclusief btw; het btw-percentage (standaard 21%) stel je in op de factuurweergave.
-- Weekdoelen gebruiken dezelfde ISO-week (maandag–zondag) als het overzicht.
+- Weekdoelen op het klokscherm gebruiken dezelfde ISO-week (maandag–zondag) als het overzicht. In de **weekevaluatie** geldt het weekdoel voor de evaluatieperiode zaterdag t/m vrijdag; het doel wordt bij het eerste opslaan van een evaluatie vastgelegd.
+- Weekevaluatie: "vergeten uit te klokken" = een sessie die langer liep dan de waarschuwingsduur (bruto, pauzes meegeteld). Sessietellingen gaan over sessies die in de periode begonnen. De drempelwaarden voor de automatische punten staan bovenin `src/lib/evaluation.ts`.
+
+### Weekevaluatie testen
+
+1. `npm run dev` en open http://localhost:5173.
+2. Voeg via *Overzicht → Sessie toevoegen* een paar sessies toe in de afgelopen zaterdag–vrijdag (enkele zonder notitie, één van 11+ uur), en stel onder *Projecten* een weekdoel en een uurtarief in.
+3. Klok in, open *Evaluatie* en controleer dat de timerbalk doorloopt. Loop de stappen door, sla een concept op, herlaad de pagina en ga verder.
+4. Rond af: de melding op het klokscherm verdwijnt en de evaluatie staat bij *Eerdere evaluaties*. Kies de vrijdag ervoor, vul focuspunten in, rond af en kijk in de evaluatie erna bij stap 2 (terugblik) en 4 (trends).
+5. Op een andere dag dan vrijdag zie je de melding *"Evaluatie van vrijdag dd-mm-jjjj staat nog open"*.
 
 ## Techniek
 
