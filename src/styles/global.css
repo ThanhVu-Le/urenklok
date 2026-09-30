@@ -985,3 +985,213 @@ dialog.modal::backdrop {
   flex-direction: column;
   gap: 4px;
 }
+
+/* ===== Weekevaluatie ===== */
+.evaluation-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+.evaluation-notice h2 {
+  margin: 0 0 4px;
+  color: var(--accent);
+}
+.evaluation-notice p {
+  margin: 0;
+}
+
+.live-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.live-bar .status-dot {
+  background: var(--accent);
+}
+.live-bar[data-paused='true'] {
+  background: var(--pause-soft);
+}
+.live-bar[data-paused='true'] .status-dot {
+  background: var(--pause);
+}
+.live-bar-project {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-bar-timer {
+  font-weight: 600;
+  color: var(--accent);
+}
+.live-bar[data-paused='true'] .live-bar-timer {
+  color: var(--pause);
+}
+
+.badge-concept {
+  background: var(--pause-soft);
+  color: var(--pause);
+}
+
+.segmented.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.segmented.steps button {
+  padding: 8px 4px;
+}
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  margin-right: 2px;
+}
+.segmented.steps button[aria-pressed='true'] .step-number {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+@media (max-width: 480px) {
+  .segmented.steps button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.78rem;
+  }
+}
+
+.goal-track {
+  margin: 10px 0 4px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px 16px;
+  margin: 18px 0 0;
+}
+.stat-grid dt {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.stat-grid dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.focus-review > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.focus-review .segmented button[data-result='gelukt'][aria-pressed='true'] {
+  color: var(--accent);
+}
+.focus-review .segmented button[data-result='deels'][aria-pressed='true'] {
+  color: var(--pause);
+}
+.focus-review .segmented button[data-result='niet'][aria-pressed='true'] {
+  color: var(--danger);
+}
+
+.rating {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+.rating button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rating button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.focus-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+}
+.focus-fields legend {
+  padding: 0;
+  margin-bottom: 5px;
+}
+
+.conclusion-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.own-answers {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.own-answers p {
+  margin: 0 0 4px;
+}
+.own-answers ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.pre-line {
+  white-space: pre-line;
+}
+
+.evaluation-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.evaluation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 4px 0;
+}
+.evaluation-row[aria-current='true'] .evaluation-row-date {
+  color: var(--accent);
+  font-weight: 600;
+}
+.evaluation-row-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

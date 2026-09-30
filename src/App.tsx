@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ChartIcon, ClockIcon, DatabaseIcon, FolderIcon } from './components/Icons';
+import { ChartIcon, ClipboardIcon, ClockIcon, DatabaseIcon, FolderIcon } from './components/Icons';
 import { ToastProvider, useToast } from './components/Toast';
 import { UpdatePrompt } from './components/UpdatePrompt';
 import { useClock } from './hooks/useClock';
@@ -11,12 +11,14 @@ import { netMs } from './lib/time';
 import { ClockScreen } from './screens/ClockScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { DataScreen } from './screens/DataScreen';
+import { EvaluationScreen } from './screens/EvaluationScreen';
 import { InvoiceScreen } from './screens/InvoiceScreen';
 import { ProjectsScreen } from './screens/ProjectsScreen';
 
 const NAV: { route: Route; label: string; icon: typeof ClockIcon }[] = [
   { route: 'klok', label: 'Klok', icon: ClockIcon },
   { route: 'overzicht', label: 'Overzicht', icon: ChartIcon },
+  { route: 'evaluatie', label: 'Evaluatie', icon: ClipboardIcon },
   { route: 'projecten', label: 'Projecten', icon: FolderIcon },
   { route: 'gegevens', label: 'Gegevens', icon: DatabaseIcon },
 ];
@@ -68,6 +70,7 @@ function Shell() {
       <main className="app-main">
         {route === 'klok' && <ClockScreen clock={clock} />}
         {route === 'overzicht' && <OverviewScreen />}
+        {route === 'evaluatie' && <EvaluationScreen clock={clock} />}
         {route === 'projecten' && <ProjectsScreen />}
         {route === 'gegevens' && <DataScreen />}
         {route === 'factuur' && <InvoiceScreen />}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PauseIcon, PlayIcon, PlusIcon, StopIcon } from '../components/Icons';
+import { EvaluationNotice } from '../components/EvaluationNotice';
 import { LongSessionWarning } from '../components/LongSessionWarning';
 import { WeekGoals } from '../components/WeekGoals';
 import { SessionForm } from '../components/SessionForm';
@@ -97,6 +98,8 @@ export function ClockScreen({ clock }: { clock: ClockController }) {
       </section>
 
       {active && <NoteEditor key={active.id} session={active} />}
+
+      <EvaluationNotice now={now} />
 
       <WeekGoals now={now} />
 

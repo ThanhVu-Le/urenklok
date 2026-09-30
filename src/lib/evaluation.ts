@@ -2,7 +2,7 @@
  * Weekevaluatie: cijfers van een evaluatieperiode, automatische punten ("wat ging goed" en "werkpunten")
  * en trends over meerdere perioden. Alles puur en getest; het scherm toont alleen de uitkomst.
  */
-import type { FocusReview, Project, Range, Session } from '../types';
+import type { Evaluation, FocusReview, Project, Range, Session } from '../types';
 import { evaluationRange, formatDuration, formatNumberNl, parseEvaluationKey, shiftFriday } from './dates';
 import { grossMs, netMs, totalsInRange } from './time';
 
@@ -108,6 +108,11 @@ export function periodStats(
   };
 }
 
+/** Behaald deel van het weekdoel (1 = precies gehaald); `null` zonder doel. */
+export function goalRatio(totalMs: number, goalHours: number | null): number | null {
+  return goalHours && goalHours > 0 ? totalMs / (goalHours * HOUR) : null;
+}
+
 /** Is het doel gehaald? Precies gehaald telt ook. */
 export function goalReached(totalMs: number, goalHours: number | null): boolean | null {
   if (!goalHours || goalHours <= 0) return null;
@@ -119,15 +124,16 @@ export function goalReached(totalMs: number, goalHours: number | null): boolean 
 /**
  * Totalen van de `count` perioden vóór de vrijdag `key`, oudste eerst. Perioden die helemaal vóór
  * de allereerste sessie liggen tellen niet mee (anders drukken lege weken van vóór het app-gebruik het gemiddelde).
+ * Geef `firstStart` mee als `sessions` niet alle sessies bevat.
  */
 export function previousPeriods(
   sessions: Session[],
   key: string,
   count: number,
   now: number,
+  firstStart: number | null = sessions.length > 0 ? Math.min(...sessions.map((s) => s.start)) : null,
 ): { key: string; totalMs: number }[] {
-  if (sessions.length === 0) return [];
-  const firstStart = Math.min(...sessions.map((s) => s.start));
+  if (firstStart === null) return [];
   const result: { key: string; totalMs: number }[] = [];
   for (let i = count; i >= 1; i--) {
     const k = shiftFriday(key, -i);
@@ -341,6 +347,32 @@ export function trends(history: TrendPeriod[]): Trends {
   }
 
   return { periods: list.length, hours, goal, rating, recurringFocus, points };
+}
+
+/**
+ * Bouwt de trendhistorie (oudste eerst): voorgaande perioden plus de huidige. Cijfer, focus en doel komen
+ * uit de evaluatie van die vrijdag; zonder evaluatie geldt het huidige weekdoel. Voor de huidige periode
+ * gaat `current` (wat er nu op het scherm staat) voor.
+ */
+export function trendHistory(
+  previous: { key: string; totalMs: number }[],
+  current: Omit<TrendPeriod, 'goalHours'> & { goalHours: number | null },
+  evaluations: Pick<Evaluation, 'id' | 'rating' | 'focus' | 'goalHours'>[],
+  defaultGoalHours: number | null,
+): TrendPeriod[] {
+  const byId = new Map(evaluations.map((e) => [e.id, e]));
+  const past = previous.map(({ key, totalMs }): TrendPeriod => {
+    const e = byId.get(key);
+    return e
+      ? { key, totalMs, goalHours: e.goalHours, rating: e.rating, focus: e.focus }
+      : { key, totalMs, goalHours: defaultGoalHours, rating: null, focus: [] };
+  });
+  return [...past, current];
+}
+
+/** De laatste evaluatie vóór de vrijdag `key` (niet per se precies een week eerder). */
+export function previousEvaluation<T extends Pick<Evaluation, 'id'>>(evaluations: T[], key: string): T | undefined {
+  return evaluations.filter((e) => e.id < key).sort((a, b) => b.id.localeCompare(a.id))[0];
 }
 
 /** Focuspunten die in meerdere evaluaties voorkomen (hoofdletters en spaties maken niet uit). Meest voorkomend eerst. */

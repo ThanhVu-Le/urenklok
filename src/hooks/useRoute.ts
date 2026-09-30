@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-export type Route = 'klok' | 'overzicht' | 'projecten' | 'gegevens' | 'factuur';
+export type Route = 'klok' | 'overzicht' | 'evaluatie' | 'projecten' | 'gegevens' | 'factuur';
 
-const ROUTES: Route[] = ['klok', 'overzicht', 'projecten', 'gegevens', 'factuur'];
+const ROUTES: Route[] = ['klok', 'overzicht', 'evaluatie', 'projecten', 'gegevens', 'factuur'];
 
 function parse(hash: string): Route {
   const name = hash.replace(/^#\/?/, '').split(/[/?]/)[0] ?? '';

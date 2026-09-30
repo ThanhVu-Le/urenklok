@@ -3,14 +3,17 @@ import type { FocusReview, Project, Session } from '../types';
 import { evaluationRange } from './dates';
 import {
   compareWithPrevious,
+  goalRatio,
   goalReached,
   improvements,
   periodStats,
+  previousEvaluation,
   previousPeriods,
   projectShares,
   recurring,
   reviewFor,
   strengths,
+  trendHistory,
   trends,
   type EvaluationContext,
   type TrendPeriod,
@@ -115,6 +118,8 @@ describe('weekdoel', () => {
     expect(goalReached(8 * H, 8)).toBe(true);
     expect(goalReached(8 * H - 1, 8)).toBe(false);
     expect(goalReached(8 * H, null)).toBeNull();
+    expect(goalRatio(6 * H, 8)).toBe(0.75);
+    expect(goalRatio(6 * H, null)).toBeNull();
     expect(ids(strengths(ctx))).toContain('goal-reached');
     expect(ids(improvements(ctx))).not.toContain('goal-missed');
     expect(strengths(ctx).find((p) => p.id === 'goal-reached')!.text).toBe('Weekdoel gehaald: 8u 00m van 8 uur (100%).');
@@ -163,6 +168,13 @@ describe('vergelijking met voorgaande perioden', () => {
       { key: '2026-09-18', totalMs: 2 * H },
     ]);
     expect(previousPeriods([], '2026-09-25', 4, AFTER)).toEqual([]);
+    // Eerdere sessies buiten de geladen selectie: lege perioden tellen dan wel mee.
+    expect(previousPeriods(sessions, '2026-09-25', 4, AFTER, t('2026-08-01')).map((p) => p.totalMs)).toEqual([
+      0,
+      0,
+      3 * H,
+      2 * H,
+    ]);
   });
 });
 
@@ -298,5 +310,38 @@ describe('trends', () => {
     const result = trends([period(1, 20, { focus: ['Lezen'] }), period(2, 20, { focus: ['lezen'] })]);
     expect(result.recurringFocus).toEqual([{ text: 'lezen', count: 2 }]);
     expect(ids(result.points)).toContain('focus-lezen');
+  });
+});
+
+describe('trendhistorie en vorige evaluatie', () => {
+  const evaluations = [
+    { id: '2026-09-11', rating: 6, focus: ['Lezen'], goalHours: 30 },
+    { id: '2026-09-18', rating: null, focus: [], goalHours: null },
+  ];
+
+  it('combineert perioden met evaluaties; zonder evaluatie het huidige doel', () => {
+    const history = trendHistory(
+      [
+        { key: '2026-09-04', totalMs: 20 * H },
+        { key: '2026-09-11', totalMs: 25 * H },
+        { key: '2026-09-18', totalMs: 30 * H },
+      ],
+      { key: '2026-09-25', totalMs: 32 * H, goalHours: 32, rating: 8, focus: ['Lezen'] },
+      evaluations,
+      32,
+    );
+    expect(history).toEqual([
+      { key: '2026-09-04', totalMs: 20 * H, goalHours: 32, rating: null, focus: [] },
+      { key: '2026-09-11', totalMs: 25 * H, goalHours: 30, rating: 6, focus: ['Lezen'] },
+      { key: '2026-09-18', totalMs: 30 * H, goalHours: null, rating: null, focus: [] },
+      { key: '2026-09-25', totalMs: 32 * H, goalHours: 32, rating: 8, focus: ['Lezen'] },
+    ]);
+    expect(trends(history).goal).toEqual({ reached: 1, counted: 3 });
+  });
+
+  it('vorige evaluatie', () => {
+    expect(previousEvaluation(evaluations, '2026-09-25')?.id).toBe('2026-09-18');
+    expect(previousEvaluation(evaluations, '2026-09-18')?.id).toBe('2026-09-11');
+    expect(previousEvaluation(evaluations, '2026-09-11')).toBeUndefined();
   });
 });

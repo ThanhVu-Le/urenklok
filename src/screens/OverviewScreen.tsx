@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { BarChart } from '../components/BarChart';
-import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, FileIcon, PlusIcon } from '../components/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, ClipboardIcon, DownloadIcon, FileIcon, PlusIcon } from '../components/Icons';
 import { SessionForm } from '../components/SessionForm';
 import { SessionList } from '../components/SessionList';
 import { useToast } from '../components/Toast';
@@ -58,12 +58,17 @@ export function OverviewScreen() {
     <div className="screen">
       <div className="screen-header">
         <h1>Overzicht</h1>
-        <div className="segmented" role="group" aria-label="Periode">
-          {KINDS.map(({ kind: k, label }) => (
-            <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
-              {label}
-            </button>
-          ))}
+        <div className="row">
+          <a className="btn btn-sm" href="#/evaluatie">
+            <ClipboardIcon /> Week evalueren
+          </a>
+          <div className="segmented" role="group" aria-label="Periode">
+            {KINDS.map(({ kind: k, label }) => (
+              <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
