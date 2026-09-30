@@ -4,14 +4,16 @@
  * - Per project/sessie wint de versie met de nieuwste `updatedAt` (bij gelijke stand: lokaal).
  * - Projecten met een andere id maar dezelfde naam worden als hetzelfde project gezien.
  * - Een verwijdering wint van een sessie die daarna niet meer is aangepast.
+ * - Evaluaties (per vrijdag): nieuwste `updatedAt` wint (bij gelijke stand: lokaal).
  * - Blijven er meerdere lopende sessies over, dan worden de oudere gestopt op het moment dat de nieuwste begon.
  */
-import type { Deletion, Pause, Preferences, Project, Session } from '../types';
+import type { Deletion, Evaluation, Pause, Preferences, Project, Session } from '../types';
 
 export interface SyncData {
   projects: Project[];
   sessions: Session[];
   deletions: Deletion[];
+  evaluations: Evaluation[];
   preferences: Preferences | null;
 }
 
@@ -22,6 +24,8 @@ export interface MergeStats {
   projectsAdded: number;
   projectsUpdated: number;
   runningClosed: number;
+  evaluationsAdded: number;
+  evaluationsUpdated: number;
   preferencesUpdated: boolean;
 }
 
@@ -101,7 +105,19 @@ export function mergeData(local: SyncData, incoming: SyncData, now = Date.now())
   }
   const sessionsRemoved = local.sessions.filter((s) => !sessions.has(s.id)).length;
 
-  // 7. Voorkeuren: nieuwste wint.
+  // 7. Evaluaties: nieuwste wint.
+  const evaluations = new Map(local.evaluations.map((e) => [e.id, e]));
+  let evaluationsAdded = 0;
+  let evaluationsUpdated = 0;
+  for (const e of incoming.evaluations) {
+    const existing = evaluations.get(e.id);
+    if (!existing) evaluationsAdded++;
+    else if (e.updatedAt > existing.updatedAt) evaluationsUpdated++;
+    else continue;
+    evaluations.set(e.id, e);
+  }
+
+  // 8. Voorkeuren: nieuwste wint.
   let preferences = local.preferences;
   let preferencesUpdated = false;
   if (incoming.preferences && (!preferences || incoming.preferences.updatedAt > preferences.updatedAt)) {
@@ -113,6 +129,7 @@ export function mergeData(local: SyncData, incoming: SyncData, now = Date.now())
     projects: [...projects.values()],
     sessions: result,
     deletions: [...deletions.values()],
+    evaluations: [...evaluations.values()],
     preferences,
     stats: {
       sessionsAdded,
@@ -121,6 +138,8 @@ export function mergeData(local: SyncData, incoming: SyncData, now = Date.now())
       projectsAdded,
       projectsUpdated,
       runningClosed,
+      evaluationsAdded,
+      evaluationsUpdated,
       preferencesUpdated,
     },
   };
@@ -130,6 +149,7 @@ export function hasChanges(stats: MergeStats): boolean {
   return (
     stats.sessionsAdded + stats.sessionsUpdated + stats.sessionsRemoved + stats.projectsAdded + stats.projectsUpdated > 0 ||
     stats.runningClosed > 0 ||
+    stats.evaluationsAdded + stats.evaluationsUpdated > 0 ||
     stats.preferencesUpdated
   );
 }

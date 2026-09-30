@@ -2,7 +2,8 @@
 import { createBackup, type Backup } from '../lib/backup';
 import { mergeData, type MergeStats, type SyncData } from '../lib/merge';
 import { normalizePreferences, PREFERENCES_KEY } from '../lib/preferences';
-import type { Pause, Preferences, Project, Session } from '../types';
+import { cleanFocus } from '../lib/evaluation';
+import type { Evaluation, Pause, Preferences, Project, Session } from '../types';
 import { db, newId, PROJECT_COLORS } from './db';
 
 export const SETTING_LAST_PROJECT = 'lastProjectId';
@@ -148,6 +149,41 @@ export async function moveProject(id: string, direction: -1 | 1): Promise<void> 
   });
 }
 
+// ---------- Weekevaluaties ----------
+
+export type EvaluationInput = Pick<
+  Evaluation,
+  'goalHours' | 'rating' | 'wentWell' | 'wentLess' | 'lesson' | 'focus' | 'focusReview'
+>;
+
+/**
+ * Slaat de evaluatie van een vrijdag op als concept of afgerond. Een afgeronde evaluatie blijft
+ * afgerond bij latere wijzigingen; `completedAt` wordt alleen bij de eerste keer afronden gezet.
+ */
+export async function saveEvaluation(
+  key: string,
+  input: EvaluationInput,
+  complete: boolean,
+  now = Date.now(),
+): Promise<Evaluation> {
+  return db.transaction('rw', db.evaluations, async () => {
+    const existing = await db.evaluations.get(key);
+    const done = complete || existing?.status === 'afgerond';
+    const evaluation: Evaluation = {
+      ...input,
+      id: key,
+      focus: cleanFocus(input.focus),
+      rating: input.rating !== null && input.rating >= 1 && input.rating <= 10 ? Math.round(input.rating) : null,
+      status: done ? 'afgerond' : 'concept',
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      completedAt: existing?.completedAt ?? (done ? now : null),
+    };
+    await db.evaluations.put(evaluation);
+    return evaluation;
+  });
+}
+
 // ---------- Voorkeuren ----------
 
 export async function getPreferences(): Promise<Preferences> {
@@ -166,24 +202,32 @@ export async function savePreferences(patch: Partial<Omit<Preferences, 'updatedA
 export const SETTING_LAST_BACKUP = 'lastBackupAt';
 
 export async function exportAll(): Promise<Backup> {
-  return db.transaction('r', db.projects, db.sessions, db.settings, db.deletions, async () =>
+  return db.transaction('r', [db.projects, db.sessions, db.settings, db.deletions, db.evaluations], async () =>
     createBackup({
       projects: await db.projects.toArray(),
       sessions: await db.sessions.toArray(),
       settings: await db.settings.toArray(),
       deletions: await db.deletions.toArray(),
+      evaluations: await db.evaluations.toArray(),
     }),
   );
 }
 
 /** Vervangt alle gegevens door de inhoud van de back-up (in één transactie: alles of niets). */
 export async function replaceAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', db.projects, db.sessions, db.settings, db.deletions, async () => {
-    await Promise.all([db.projects.clear(), db.sessions.clear(), db.settings.clear(), db.deletions.clear()]);
+  await db.transaction('rw', [db.projects, db.sessions, db.settings, db.deletions, db.evaluations], async () => {
+    await Promise.all([
+      db.projects.clear(),
+      db.sessions.clear(),
+      db.settings.clear(),
+      db.deletions.clear(),
+      db.evaluations.clear(),
+    ]);
     await db.projects.bulkAdd(backup.projects);
     await db.sessions.bulkAdd(backup.sessions);
     await db.settings.bulkAdd(backup.settings);
     await db.deletions.bulkAdd(backup.deletions);
+    await db.evaluations.bulkAdd(backup.evaluations);
   });
 }
 
@@ -197,6 +241,7 @@ function syncDataFromBackup(backup: Backup): SyncData {
     projects: backup.projects,
     sessions: backup.sessions,
     deletions: backup.deletions,
+    evaluations: backup.evaluations,
     preferences: prefs ? normalizePreferences(prefs.value) : null,
   };
 }
@@ -207,6 +252,7 @@ async function localSyncData(): Promise<SyncData> {
     projects: await db.projects.toArray(),
     sessions: await db.sessions.toArray(),
     deletions: await db.deletions.toArray(),
+    evaluations: await db.evaluations.toArray(),
     preferences: prefs ? normalizePreferences(prefs.value) : null,
   };
 }
@@ -218,12 +264,13 @@ export async function previewMerge(backup: Backup): Promise<MergeStats> {
 
 /** Voegt een sync-/back-upbestand samen met de lokale gegevens (alles of niets). */
 export async function mergeFromBackup(backup: Backup): Promise<MergeStats> {
-  return db.transaction('rw', db.projects, db.sessions, db.settings, db.deletions, async () => {
+  return db.transaction('rw', [db.projects, db.sessions, db.settings, db.deletions, db.evaluations], async () => {
     const result = mergeData(await localSyncData(), syncDataFromBackup(backup));
-    await Promise.all([db.projects.clear(), db.sessions.clear(), db.deletions.clear()]);
+    await Promise.all([db.projects.clear(), db.sessions.clear(), db.deletions.clear(), db.evaluations.clear()]);
     await db.projects.bulkAdd(result.projects);
     await db.sessions.bulkAdd(result.sessions);
     await db.deletions.bulkAdd(result.deletions);
+    await db.evaluations.bulkAdd(result.evaluations);
     if (result.preferences) await setSetting(PREFERENCES_KEY, result.preferences);
     await setSetting(SETTING_LAST_SYNC, Date.now());
     return result.stats;

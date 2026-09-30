@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Project, Session } from '../types';
+import type { Evaluation, Project, Session } from '../types';
 import { createBackup, parseBackup } from './backup';
 import { csvField, sessionsToCsv } from './csv';
 
@@ -72,11 +72,26 @@ describe('CSV-export', () => {
 });
 
 describe('JSON-back-up', () => {
+  const evaluation: Evaluation = {
+    id: '2026-09-25',
+    status: 'afgerond',
+    goalHours: 32,
+    rating: 8,
+    wentWell: 'Goed',
+    wentLess: 'Minder',
+    lesson: 'Les',
+    focus: ['Offerte versturen'],
+    focusReview: [{ text: 'Sporten', result: 'deels' }],
+    createdAt: 1,
+    updatedAt: 2,
+    completedAt: 2,
+  };
   const backup = createBackup({
     projects: [project],
     sessions,
     settings: [{ key: 'lastProjectId', value: 'p1' }],
     deletions: [{ id: 'x', deletedAt: 5 }],
+    evaluations: [evaluation],
   });
 
   it('leest een eigen back-up volledig terug', () => {
@@ -86,7 +101,27 @@ describe('JSON-back-up', () => {
       expect(result.backup.projects).toEqual([project]);
       expect(result.backup.sessions).toEqual(sessions);
       expect(result.backup.settings).toHaveLength(1);
+      expect(result.backup.evaluations).toEqual([evaluation]);
+      expect(result.backup.schemaVersion).toBe(3);
     }
+  });
+
+  it('een v2-back-up zonder evaluaties blijft importeerbaar', () => {
+    const v2: Record<string, unknown> = { ...backup, schemaVersion: 2 };
+    delete v2.evaluations;
+    const result = parseBackup(JSON.stringify(v2));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.backup.sessions).toEqual(sessions);
+      expect(result.backup.evaluations).toEqual([]);
+    }
+  });
+
+  it('weigert ongeldige of dubbele evaluaties', () => {
+    const invalid = { ...backup, evaluations: [{ ...evaluation, status: 'klaar' }] };
+    expect(parseBackup(JSON.stringify(invalid))).toMatchObject({ ok: false, error: 'Evaluatie 1 in de back-up is ongeldig.' });
+    const double = { ...backup, evaluations: [evaluation, evaluation] };
+    expect(parseBackup(JSON.stringify(double))).toMatchObject({ ok: false, error: 'De back-up bevat dubbele evaluaties.' });
   });
 
   it('weigert ongeldige bestanden met een duidelijke melding', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Preferences, Project, Session } from '../types';
+import type { Evaluation, Preferences, Project, Session } from '../types';
 import { parseBackup } from './backup';
-import { mergeData, type SyncData } from './merge';
+import { hasChanges, mergeData, type SyncData } from './merge';
 import { DEFAULT_PREFERENCES } from './preferences';
 
 function project(id: string, name: string, updatedAt = 0, extra: Partial<Project> = {}): Project {
@@ -13,7 +13,7 @@ function session(id: string, projectId: string, start: number, end: number | nul
 }
 
 function data(partial: Partial<SyncData>): SyncData {
-  return { projects: [], sessions: [], deletions: [], preferences: null, ...partial };
+  return { projects: [], sessions: [], deletions: [], evaluations: [], preferences: null, ...partial };
 }
 
 describe('samenvoegen', () => {
@@ -112,6 +112,30 @@ describe('samenvoegen', () => {
     const b: Preferences = { ...DEFAULT_PREFERENCES, weeklyGoalHours: 36, updatedAt: 20 };
     expect(mergeData(data({ preferences: a }), data({ preferences: b })).preferences?.weeklyGoalHours).toBe(36);
     expect(mergeData(data({ preferences: b }), data({ preferences: a })).preferences?.weeklyGoalHours).toBe(36);
+  });
+
+  it('evaluaties: nieuwste wint, bij gelijke stand lokaal', () => {
+    const ev = (id: string, updatedAt: number, lesson: string): Evaluation => ({
+      id,
+      status: 'concept',
+      goalHours: null,
+      rating: null,
+      wentWell: '',
+      wentLess: '',
+      lesson,
+      focus: [],
+      focusReview: [],
+      createdAt: 0,
+      updatedAt,
+      completedAt: null,
+    });
+    const local = data({ evaluations: [ev('2026-09-18', 10, 'lokaal'), ev('2026-09-25', 10, 'lokaal')] });
+    const incoming = data({ evaluations: [ev('2026-09-18', 20, 'ander'), ev('2026-09-25', 10, 'ander'), ev('2026-10-02', 5, 'ander')] });
+    const result = mergeData(local, incoming);
+    const lessons = Object.fromEntries(result.evaluations.map((e) => [e.id, e.lesson]));
+    expect(lessons).toEqual({ '2026-09-18': 'ander', '2026-09-25': 'lokaal', '2026-10-02': 'ander' });
+    expect(result.stats).toMatchObject({ evaluationsAdded: 1, evaluationsUpdated: 1 });
+    expect(hasChanges(mergeData(result, incoming).stats)).toBe(false);
   });
 
   it('samenvoegen is idempotent', () => {

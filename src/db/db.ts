@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { normalizeProject } from '../lib/preferences';
-import type { Deletion, Project, Session, Setting } from '../types';
+import type { Deletion, Evaluation, Project, Session, Setting } from '../types';
 
 /** Rustig palet dat in licht én donker thema goed leesbaar is. */
 export const PROJECT_COLORS = [
@@ -27,6 +27,7 @@ export class UrenklokDB extends Dexie {
   sessions!: Table<Session, string>;
   settings!: Table<Setting, string>;
   deletions!: Table<Deletion, string>;
+  evaluations!: Table<Evaluation, string>;
 
   constructor(name = 'urenklok') {
     super(name);
@@ -46,6 +47,13 @@ export class UrenklokDB extends Dexie {
             Object.assign(p, normalizeProject(p));
           }),
       );
+    // v3: weekevaluaties (sleutel = datum van de vrijdag). Alleen een nieuwe tabel; bestaande
+    // projecten, sessies, instellingen en verwijdermarkeringen blijven bewust onaangeroerd.
+    this.version(3)
+      .stores({ evaluations: 'id' })
+      .upgrade(() => {
+        // Niets om om te zetten.
+      });
     this.on('populate', (tx) => {
       const now = Date.now();
       tx.table('projects').bulkAdd(

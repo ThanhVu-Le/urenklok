@@ -132,6 +132,8 @@ function describe(s: MergeStats): string[] {
   if (s.sessionsRemoved) lines.push(`${n(s.sessionsRemoved, 'sessie', 'sessies')} verwijderen (op het andere apparaat verwijderd)`);
   if (s.projectsAdded) lines.push(`${n(s.projectsAdded, 'nieuw project', 'nieuwe projecten')} toevoegen`);
   if (s.projectsUpdated) lines.push(`${n(s.projectsUpdated, 'project', 'projecten')} bijwerken`);
+  if (s.evaluationsAdded) lines.push(`${n(s.evaluationsAdded, 'nieuwe evaluatie', 'nieuwe evaluaties')} toevoegen`);
+  if (s.evaluationsUpdated) lines.push(`${n(s.evaluationsUpdated, 'evaluatie', 'evaluaties')} bijwerken`);
   if (s.preferencesUpdated) lines.push('Doelen en factuurinstellingen bijwerken');
   if (s.runningClosed) lines.push(`${n(s.runningClosed, 'lopende sessie', 'lopende sessies')} stoppen (er liep er op beide apparaten één)`);
   return lines;

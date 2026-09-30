@@ -13,6 +13,7 @@ import {
   getActiveSession,
   getSetting,
   replaceAll,
+  saveEvaluation,
   SETTING_LAST_PROJECT,
   togglePause,
 } from './actions';
@@ -122,5 +123,46 @@ describe('synchroniseren', () => {
     const prefs = await getPreferences();
     expect(prefs.weeklyGoalHours).toBe(32);
     expect(prefs.updatedAt).toBeGreaterThan(0);
+  });
+});
+
+describe('weekevaluaties', () => {
+  const input = {
+    goalHours: 32,
+    rating: 7,
+    wentWell: 'Offerte af',
+    wentLess: '',
+    lesson: '',
+    focus: [' Sporten ', '', 'Boekhouding', 'Lezen', 'Te veel'],
+    focusReview: [],
+  };
+
+  it('concept opslaan, later afronden en daarna bewerken', async () => {
+    const concept = await saveEvaluation('2026-09-25', input, false, 1000);
+    expect(concept).toMatchObject({ status: 'concept', createdAt: 1000, completedAt: null });
+    expect(concept.focus).toEqual(['Sporten', 'Boekhouding', 'Lezen']);
+
+    const done = await saveEvaluation('2026-09-25', { ...input, rating: 8 }, true, 2000);
+    expect(done).toMatchObject({ status: 'afgerond', rating: 8, createdAt: 1000, updatedAt: 2000, completedAt: 2000 });
+
+    // Later nog iets aanpassen: blijft afgerond.
+    const edited = await saveEvaluation('2026-09-25', { ...input, lesson: 'Eerder beginnen' }, false, 3000);
+    expect(edited).toMatchObject({ status: 'afgerond', completedAt: 2000, updatedAt: 3000, lesson: 'Eerder beginnen' });
+    expect(await db.evaluations.count()).toBe(1);
+  });
+
+  it('gaan mee in back-up en samenvoegen', async () => {
+    await saveEvaluation('2026-09-25', input, true, 1000);
+    const backup = await exportAll();
+    expect(backup.evaluations).toHaveLength(1);
+
+    await db.evaluations.clear();
+    expect(await previewMerge(backup)).toMatchObject({ evaluationsAdded: 1 });
+    await mergeFromBackup(backup);
+    expect((await db.evaluations.get('2026-09-25'))?.rating).toBe(7);
+
+    await db.evaluations.clear();
+    await replaceAll(backup);
+    expect(await db.evaluations.toArray()).toEqual(backup.evaluations);
   });
 });

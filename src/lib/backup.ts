@@ -1,9 +1,12 @@
-import type { Deletion, Project, Session, Setting } from '../types';
+import type { Deletion, Evaluation, FocusResult, Project, Session, Setting } from '../types';
 import { normalizeProject } from './preferences';
 
 export const BACKUP_APP = 'urenklok';
-/** v1: projecten, sessies, instellingen. v2: + tarief/weekdoel/updatedAt op projecten en verwijdermarkeringen. */
-export const BACKUP_SCHEMA_VERSION = 2;
+/**
+ * v1: projecten, sessies, instellingen. v2: + tarief/weekdoel/updatedAt op projecten en verwijdermarkeringen.
+ * v3: + weekevaluaties.
+ */
+export const BACKUP_SCHEMA_VERSION = 3;
 
 export interface Backup {
   app: typeof BACKUP_APP;
@@ -13,10 +16,11 @@ export interface Backup {
   sessions: Session[];
   settings: Setting[];
   deletions: Deletion[];
+  evaluations: Evaluation[];
 }
 
 export function createBackup(
-  data: { projects: Project[]; sessions: Session[]; settings: Setting[]; deletions: Deletion[] },
+  data: { projects: Project[]; sessions: Session[]; settings: Setting[]; deletions: Deletion[]; evaluations: Evaluation[] },
   now = new Date(),
 ): Backup {
   return {
@@ -68,6 +72,17 @@ export function parseBackup(text: string): ParseResult {
     ? raw.deletions.filter((d): d is Deletion => isObject(d) && typeof d.id === 'string' && isTime(d.deletedAt))
     : [];
 
+  // Ontbreekt in back-ups van vóór v3.
+  const evaluations: Evaluation[] = [];
+  if (Array.isArray(raw.evaluations)) {
+    for (const [i, e] of raw.evaluations.entries()) {
+      const evaluation = toEvaluation(e);
+      if (!evaluation) return fail(`Evaluatie ${i + 1} in de back-up is ongeldig.`);
+      evaluations.push(evaluation);
+    }
+  }
+  if (new Set(evaluations.map((e) => e.id)).size !== evaluations.length) return fail('De back-up bevat dubbele evaluaties.');
+
   return {
     ok: true,
     backup: {
@@ -78,6 +93,7 @@ export function parseBackup(text: string): ParseResult {
       sessions,
       settings,
       deletions,
+      evaluations,
     },
   };
 }
@@ -103,6 +119,39 @@ function isProject(v: unknown): v is Omit<Project, 'updatedAt' | 'hourlyRate' | 
     typeof v.order === 'number' &&
     isTime(v.createdAt)
   );
+}
+
+const FOCUS_RESULTS: FocusResult[] = ['gelukt', 'deels', 'niet'];
+const isText = (v: unknown): v is string => typeof v === 'string';
+
+/** Controleert een evaluatie en vult ontbrekende tekstvelden aan; `null` als hij ongeldig is. */
+function toEvaluation(v: unknown): Evaluation | null {
+  if (!isObject(v) || !isText(v.id) || !/^\d{4}-\d{2}-\d{2}$/.test(v.id)) return null;
+  if (v.status !== 'concept' && v.status !== 'afgerond') return null;
+  if (!isTime(v.createdAt) || !isTime(v.updatedAt)) return null;
+  const focus = Array.isArray(v.focus) ? v.focus.filter(isText) : [];
+  const focusReview = Array.isArray(v.focusReview)
+    ? v.focusReview
+        .filter((r): r is Record<string, unknown> => isObject(r) && isText(r.text))
+        .map((r) => ({
+          text: r.text as string,
+          result: FOCUS_RESULTS.includes(r.result as FocusResult) ? (r.result as FocusResult) : null,
+        }))
+    : [];
+  return {
+    id: v.id,
+    status: v.status,
+    goalHours: typeof v.goalHours === 'number' && v.goalHours > 0 ? v.goalHours : null,
+    rating: typeof v.rating === 'number' && v.rating >= 1 && v.rating <= 10 ? v.rating : null,
+    wentWell: isText(v.wentWell) ? v.wentWell : '',
+    wentLess: isText(v.wentLess) ? v.wentLess : '',
+    lesson: isText(v.lesson) ? v.lesson : '',
+    focus,
+    focusReview,
+    createdAt: v.createdAt,
+    updatedAt: v.updatedAt,
+    completedAt: isTime(v.completedAt) ? v.completedAt : null,
+  };
 }
 
 function isSession(v: unknown): v is Session {
